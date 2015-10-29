@@ -75,3 +75,7 @@ Working on Spanish (Spain)
   - saving to translations\Spanish (Spain).csv... done.
 
 ```
+
+### Sample Transifex session
+
+![Transifex sample session](https://raw.githubusercontent.com/mlocati/ToDoList-Transifex/master/images/transifex-example.gif)
