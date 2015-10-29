@@ -66,7 +66,7 @@ try {
                 echo "done.\n";
             }
             echo "Parsing CSV file... ";
-            $translations = CsvToGettext($contents);
+            $translations = CsvToGettext($contents, true);
             echo "done.\n";
             $txUsername = (isset($options['TRANSIFEX_USERNAME']) && is_string($options['TRANSIFEX_USERNAME'])) ? $options['TRANSIFEX_USERNAME'] : '';
             if ($txUsername === '') {
@@ -487,10 +487,11 @@ function run($command, $arguments = '', $goodExitCode = 0, &$exitCode = null) {
 /**
  * Reads a CSV language file.
  * @param string $csv
+ * @param bool $isSourceLanguage
  * @return Gettext\Translations
  * @throws Exception
  */
-function CsvToGettext($csv)
+function CsvToGettext($csv, $isSourceLanguage = false)
 {
     $translations = new Gettext\Translations();
     //$translations->setLanguage($language->id);
@@ -528,7 +529,9 @@ function CsvToGettext($csv)
                             $textIn = $value;
                             break;
                         case 1:
-                            $textOut = $value;
+                            if (!$isSourceLanguage) {
+                                $textOut = $value;
+                            }
                             break;
                         case 2:
                             $classID = $value;
@@ -538,7 +541,9 @@ function CsvToGettext($csv)
                 if (!$invalidLine) {
                     $already = $translations->find($classID, $textIn);
                     if ($already === false) {
-                        $translations->insert($classID, $textIn)->setTranslation($textOut);
+                        $translation = $translations->insert($classID, $textIn);
+                        $translation->setTranslation($textOut);
+                        $translation->addFlag('c-format');
                     } elseif (strlen($textOut) > strlen($already->getTranslation())) {
                         $already->setTranslation($textOut);
                     }
