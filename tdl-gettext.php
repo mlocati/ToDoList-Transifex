@@ -543,7 +543,13 @@ function CsvToGettext($csv, $isSourceLanguage = false)
                     if ($already === false) {
                         $translation = $translations->insert($classID, $textIn);
                         $translation->setTranslation($textOut);
-                        $translation->addFlag('c-format');
+                        if (
+                            preg_match('/(^|[^%])%[dscf]/', $textIn)
+                            ||
+                            preg_match('/(^|[^%])%(\d*\.\d+)f/', $textIn)
+                        ) {
+                            $translation->addFlag('c-format');
+                        }
                     } elseif (strlen($textOut) > strlen($already->getTranslation())) {
                         $already->setTranslation($textOut);
                     }
@@ -631,7 +637,7 @@ function GettextToCsv($translations, $options)
     );
     foreach ($translations as $translation) {
         /** @var Gettext\Translation $translation */
-        $serialized = "\"".strtr($translation->getOriginal(), $charMap)."\"\t\"".strtr($translation->getContext(), $charMap)."\"\t\"".strtr($translation->getTranslation(), $charMap)."\"";
+        $serialized = "\"".strtr($translation->getOriginal(), $charMap)."\"\t\"".strtr($translation->getTranslation(), $charMap)."\"\t\"".strtr($translation->getContext(), $charMap)."\"";
         if ($translation->hasTranslation()) {
             if (empty($translated)) {
                 $translated[] = 'TRANSLATED';
