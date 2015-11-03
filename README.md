@@ -76,6 +76,17 @@ Working on Spanish (Spain)
 
 ```
 
-### Sample Transifex session
+### Converting CSV files to gettext .po format
 
-![Transifex sample session](https://raw.githubusercontent.com/mlocati/ToDoList-Transifex/master/images/transifex-example.gif)
+In order to convert a local or a remote CSV file, you can use the `csv2gettext` command:
+```sh
+php tdl-gettext.php csv2gettext <InputCSVFile> <OutputGettextFile>
+```
+
+
+### Converting gettext .po files to CSV format
+
+In order to convert a local or a remote gettext .po file, you can use the `gettext2csv` command:
+```sh
+php tdl-gettext.php gettext2csv <InputGettextFile> <OutputCSVFile>
+```

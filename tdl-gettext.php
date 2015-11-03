@@ -1,5 +1,7 @@
 <?php
+
 use Gettext\Translations;
+
 define('UTF8_BOM', "\xEF\xBB\xBF");
 
 try {
@@ -19,6 +21,16 @@ try {
             echo "  php {$argv[0]} download [DestinationDir]\n";
             echo "  Where [DestinationDir] is the path where the language files will be saved.\n";
             echo "  If it is not specified, we'll use the TRANSLATIONS_DIR option specified in the configuration file.\n";
+            echo "\n";
+            echo "# Convert a local CSV file to gettext format:\n";
+            echo "  php {$argv[0]} csv2gettext <InputCSVFile> <OutputGettextFile>\n";
+            echo "  Where <InputCSVFile> is the path to the CSV file to convert and <OutputGettextFile> is the path\n";
+            echo "  to the new gettext file to create\n";
+            echo "\n";
+            echo "# Convert a local gettext file to CSV format:\n";
+            echo "  php {$argv[0]} gettext2csv <InputGettextFile> <OutputCSVFile>\n";
+            echo "  Where <InputGettextFile> is the path to the gettext file to convert and <OutputCSVFile> is the path\n";
+            echo "  to the new CSV file to create\n";
             break;
         case 'upload':
             switch (count($arguments)) {
@@ -32,41 +44,22 @@ try {
                     $csvFile = $arguments[0];
                     break;
                 default:
-                    throw new Exception("Too many arguments");
+                    throw new Exception('Too many arguments');
             }
-            if (preg_match('_^\w+://.+_', $csvFile)) {
-                echo "Downloading remote English file... ";
-                $fd = @fopen($csvFile, 'rb');
-                if (!$fd) {
-                    throw new Exception("Failed to start downloading $csvFile");
-                }
-                $contents = '';
-                while(!@feof($fd)) {
-                    $chunk = @fread($fd, 8192);
-                    if ($chunk === false) {
-                        @fclose($fd);
-                        throw new Exception("Failed to retrieve the content of $csvFile");
-                    }
-                    $contents .= $chunk;
-                }
-                @fclose($fd);
-                if ($contents === '') {
-                    throw new Exception("Failed to download $csvFile");
-                }
-                echo "done.\n";
-            } else {
-                echo "Reading local English file... ";
-                if (!is_file($csvFile)) {
-                    throw new Exception("Unable to find the file $csvFile");
-                }
-                $contents = @file_get_contents($csvFile);
-                if ($contents === false || $contents === '') {
-                    throw new Exception("Failed to read the file $csvFile");
-                }
-                echo "done.\n";
+            echo 'Reading English CSV... ';
+            $contents = getContents($csvFile);
+            if ($contents === '') {
+                throw new Exception('empty CSV file!');
             }
-            echo "Parsing CSV file... ";
+            echo "done.\n";
+            echo 'Parsing CSV file... ';
             $translations = CsvToGettext($contents, true);
+            if (empty($translations)) {
+                throw new Exception('no translations found!');
+            }
+            if ($translations->count() < 1900) {
+                throw new Exception('too few translations found!');
+            }
             echo "done.\n";
             $txUsername = (isset($options['TRANSIFEX_USERNAME']) && is_string($options['TRANSIFEX_USERNAME'])) ? $options['TRANSIFEX_USERNAME'] : '';
             if ($txUsername === '') {
@@ -77,17 +70,17 @@ try {
                 throw new Exception('Missing/invalid TRANSIFEX_PASSWORD value in options');
             }
             $txProject = (isset($options['TRANSIFEX_PROJECT']) && is_string($options['TRANSIFEX_PROJECT'])) ? $options['TRANSIFEX_PROJECT'] : '';
-            if(!preg_match('#^[\w\-]+$#', $txProject)) {
+            if (!preg_match('#^[\w\-]+$#', $txProject)) {
                 throw new Exception('Missing/invalid TRANSIFEX_PROJECT value in options');
             }
             $txResource = (isset($options['TRANSIFEX_RESOURCE']) && is_string($options['TRANSIFEX_RESOURCE'])) ? $options['TRANSIFEX_RESOURCE'] : '';
-            if(!preg_match('#^[\w\-]+$#', $txResource)) {
+            if (!preg_match('#^[\w\-]+$#', $txResource)) {
                 throw new Exception('Missing/invalid TRANSIFEX_RESOURCE value in options');
             }
             echo "Uploading the new translatable strings to Transifex ($txProject/$txResource)... ";
             $json = @json_encode(array('content' => $translations->toPoString()));
             if ($json === false) {
-                throw new Exception("Failed to serialize the translations");
+                throw new Exception('Failed to serialize the translations');
             }
             $curl = new Curl("http://www.transifex.com/api/2/project/$txProject/resource/$txResource/content/");
             $curl->setOpt(CURLOPT_USERPWD, $txUsername.':'.$txPassword);
@@ -115,7 +108,7 @@ try {
                     $saveDir = $arguments[0];
                     break;
                 default:
-                    throw new Exception("Too many arguments");
+                    throw new Exception('Too many arguments');
             }
             $saveDir = rtrim($saveDir, '/\\');
             if (!is_dir($saveDir)) {
@@ -124,7 +117,7 @@ try {
                     throw new Exception("Unable to create directory $saveDir");
                 }
             }
-            echo "Listing languages available on Transifex... ";
+            echo 'Listing languages available on Transifex... ';
             $txUsername = (isset($options['TRANSIFEX_USERNAME']) && is_string($options['TRANSIFEX_USERNAME'])) ? $options['TRANSIFEX_USERNAME'] : '';
             if ($txUsername === '') {
                 throw new Exception('Missing/invalid TRANSIFEX_USERNAME value in options');
@@ -134,11 +127,11 @@ try {
                 throw new Exception('Missing/invalid TRANSIFEX_PASSWORD value in options');
             }
             $txProject = (isset($options['TRANSIFEX_PROJECT']) && is_string($options['TRANSIFEX_PROJECT'])) ? $options['TRANSIFEX_PROJECT'] : '';
-            if(!preg_match('#^[\w\-]+$#', $txProject)) {
+            if (!preg_match('#^[\w\-]+$#', $txProject)) {
                 throw new Exception('Missing/invalid TRANSIFEX_PROJECT value in options');
             }
             $txResource = (isset($options['TRANSIFEX_RESOURCE']) && is_string($options['TRANSIFEX_RESOURCE'])) ? $options['TRANSIFEX_RESOURCE'] : '';
-            if(!preg_match('#^[\w\-]+$#', $txResource)) {
+            if (!preg_match('#^[\w\-]+$#', $txResource)) {
                 throw new Exception('Missing/invalid TRANSIFEX_RESOURCE value in options');
             }
             $curl = new Curl("http://www.transifex.com/api/2/project/$txProject/resource/$txResource/?details");
@@ -151,8 +144,7 @@ try {
             $invalidResponse = false;
             if (!is_array($info)) {
                 $invalidResponse = true;
-            }
-            else {
+            } else {
                 if (!isset($info['source_language_code']) || !is_string($info['source_language_code']) || $info['source_language_code'] === '') {
                     $invalidResponse = true;
                 } else {
@@ -186,10 +178,10 @@ try {
             echo count($languages)." languages found.\n";
             foreach ($languages as $languageID => $languageName) {
                 echo "Working on $languageName\n";
-                echo "  - downloading... ";
+                echo '  - downloading... ';
                 $curl = new Curl("http://www.transifex.com/api/2/project/$txProject/resource/$txResource/translation/$languageID/");
                 $curl->setOpt(CURLOPT_USERPWD, $txUsername.':'.$txPassword);
-                $curl->setOpt(CURLOPT_CUSTOMREQUEST, 'GET');                
+                $curl->setOpt(CURLOPT_CUSTOMREQUEST, 'GET');
                 $response = $curl->exec();
                 if ($response['info']['http_code'] < 200 || $response['info']['http_code'] >= 300) {
                     throw new Exception($response['body'] ? $response['body'] : "Transifex returned the error code {$response['info']['http_code']}");
@@ -200,13 +192,13 @@ try {
                     throw new Exception("Invalid response from Transifex:\n{$response['body']}");
                 }
                 echo "done.\n";
-                echo "  - parsing downloaded translations... ";
+                echo '  - parsing downloaded translations... ';
                 $translations = Gettext\Translations::fromPoString($contents['content']);
                 if (empty($translations)) {
                     throw new Exception('no translations found!');
                 }
                 echo "done.\n";
-                echo "  - converting translations to csv... ";
+                echo '  - converting translations to csv... ';
                 $csv = GettextToCsv($translations, $options);
                 echo "done.\n";
                 $saveTo = $saveDir.DIRECTORY_SEPARATOR.$languageName.'.csv';
@@ -217,12 +209,74 @@ try {
                 echo "done.\n";
             }
             break;
+        case 'csv2gettext':
+            if (count($arguments) !== 2) {
+                throw new Exception('Too few arguments');
+            }
+            $fromCSV = $arguments[0];
+            echo 'Reading input CSV file... ';
+            $csv = getContents($fromCSV);
+            if ($csv === '') {
+                throw new Exception('empty CSV file');
+            }
+            echo "done.\n";
+            $toGettext = $arguments[1];
+            if (file_exists($toGettext)) {
+                throw new Exception('The output gettext file ('.$fromCSV.') already exists');
+            }
+            echo 'Parsing CSV... ';
+            if (strpos($csv, UTF8_BOM) === 0) {
+                $csv = substr($csv, strlen(UTF8_BOM));
+            }
+            $csv = str_replace("\r", "\n", str_replace("\r\n", "\n", $csv));
+            $translations = CsvToGettext($csv);
+            if (empty($translations)) {
+                throw new Exception('no translations found!');
+            }
+            echo "done.\n";
+            echo 'Generating gettext... ';
+            $gettext = $translations->toPoString();
+            echo "done.\n";
+            echo 'Saving gettext to file... ';
+            if (@file_put_contents($toGettext, $gettext) === false) {
+                throw new Exception('Failed to save gettext to '.$toGettext);
+            }
+            echo "done.\n";
+            break;
+        case 'gettext2csv':
+            if (count($arguments) !== 2) {
+                throw new Exception('Too few arguments');
+            }
+            $fromGettext = $arguments[0];
+            echo 'Reading input gettext file... ';
+            $gettext = getContents($fromGettext);
+            if ($gettext === '') {
+                throw new Exception('empty gettext file');
+            }
+            echo "done.\n";
+            $toCSV = $arguments[1];
+            if (file_exists($toCSV)) {
+                throw new Exception('The output CSV file ('.$toCSV.') already exists');
+            }
+            echo 'Parsing gettext... ';
+            $translations = Gettext\Translations::fromPoString($gettext);
+            if (empty($translations)) {
+                throw new Exception('no translations found!');
+            }
+            echo 'Generating CSV... ';
+            $csv = GettextToCsv($translations, $options);
+            echo "done.\n";
+            echo 'Saving CSV to file... ';
+            if (@file_put_contents($toCSV, $csv) === false) {
+                throw new Exception('Failed to save CSV to '.$toCSV);
+            }
+            echo "done.\n";
+            break;
         default:
             throw new Exception("Unknown command: $command");
     }
     exit(0);
-}
-catch (Exception $x) {
+} catch (Exception $x) {
     $fd = fopen('php://stderr', 'a');
     fwrite($fd, $x->getMessage());
     fclose($fd);
@@ -231,7 +285,6 @@ catch (Exception $x) {
 
 /**
  * Check the availability of the required libraries.
- * Throws an Exception in case of problems.
  *
  * @throws Exception
  */
@@ -251,7 +304,6 @@ function checkDependencies()
 
 /**
  * Read the program options.
- * In case of errors an Exception will be thrown.
  * 
  * @return array
  * 
@@ -284,55 +336,59 @@ function readOptions()
             if (isset($createEmptyConfig)) {
                 break;
             }
-            echo "Please answer with Y[es] or N[O]... ";
+            echo 'Please answer with Y[es] or N[O]... ';
         }
         if ($createEmptyConfig === true) {
             $config = array();
-            $config[] = "<?php";
-            $config[] = "return array(";
+            $config[] = '<?php';
+            $config[] = 'return array(';
             $config[] = '';
-            $config[] = "    // The location of the TodoList file that contains the strings to be translated.";
-            $config[] = "    // It can be a local file or an URL";
+            $config[] = '    // The location of the TodoList file that contains the strings to be translated.';
+            $config[] = '    // It can be a local file or an URL';
             $config[] = "    'ENGLISH_FILE' => 'https://raw.githubusercontent.com/abstractspoon/ToDoList_Resources/master/Translations/YourLanguage.csv',";
             $config[] = '';
-            $config[] = "    // The location where the CSV language files will be saved.";
+            $config[] = '    // The location where the CSV language files will be saved.';
             $config[] = "    'TRANSLATIONS_DIR' => '".addslashes(dirname(__FILE__).DIRECTORY_SEPARATOR.'translations')."',";
             $config[] = '';
-            $config[] = "    // The value of the TRANSTEXT Library";
+            $config[] = '    // The value of the TRANSTEXT Library';
             $config[] = "    'TRANSTEXT_VERSION' => '7.0.0.0',";
             $config[] = '';
-            $config[] = "    // Your Transifex user name";
+            $config[] = '    // Your Transifex user name';
             $config[] = "    'TRANSIFEX_USERNAME' => 'username',";
             $config[] = '';
-            $config[] = "    // Your Transifex password";
+            $config[] = '    // Your Transifex password';
             $config[] = "    'TRANSIFEX_PASSWORD' => 'password',";
             $config[] = '';
-            $config[] = "    // The Transifex project URL slug";
-            $config[] = "    'TRANSIFEX_PROJECT' => 'tdl-test',";
+            $config[] = '    // The Transifex project URL slug';
+            $config[] = "    'TRANSIFEX_PROJECT' => 'todolist',";
             $config[] = '';
-            $config[] = "    // The Transifex resource URL slug";
+            $config[] = '    // The Transifex resource URL slug';
             $config[] = "    'TRANSIFEX_RESOURCE' => 'core',";
             $config[] = '';
-            $config[] = ");";
+            $config[] = ');';
             if (@file_put_contents($optionsFile, implode(PHP_EOL, $config).PHP_EOL) === false) {
                 throw new Exception('Unable to create the configuration file.');
             }
             throw new Exception("The configuration file has been created.\nPlease customize it as for your needings.");
-        }
-        else {
-            throw new Exception("Please create your configuration file.");
+        } else {
+            throw new Exception('Please create your configuration file.');
         }
     }
     $options = null;
-    $options = include $optionsFile."";
+    $options = include $optionsFile.'';
     if (!is_array($options)) {
         throw new Exception("Invalid configuration file\n$optionsFile");
     }
+
     return $options;
 }
 
 /**
- * 
+ * Parse the command line arguments and extract the command and its arguments.
+ *
+ * @param array $arguments
+ *
+ * @return string
  */
 function parseCommandLine(&$arguments)
 {
@@ -353,37 +409,38 @@ function parseCommandLine(&$arguments)
                 break;
         }
     }
+
     return $command;
 }
 
 /**
  * Execute a command and return its output.
  *
- * @param string $command The command to execute
- * @param string|array $arguments The command arguments
- * @param int|int[] $goodResult The exit code(s) to be considered as good. In case the command ends with a different exit code, an Exception will be thrown
- * @param int $exitCode The command exit code will be put here
+ * @param string       $command    The command to execute
+ * @param string|array $arguments  The command arguments
+ * @param int|int[]    $goodResult The exit code(s) to be considered as good. In case the command ends with a different exit code, an Exception will be thrown
+ * @param int          $exitCode   The command exit code will be put here
  *
  * @return string Returns the command output
  *
  * @throws Exception
  */
-function run($command, $arguments = '', $goodExitCode = 0, &$exitCode = null) {
+function run($command, $arguments = '', $goodExitCode = 0, &$exitCode = null)
+{
     $line = escapeshellarg($command);
-    if(is_array($arguments)) {
-        if(count($arguments)) {
-            $line .= ' ' . implode(' ', $arguments);
+    if (is_array($arguments)) {
+        if (count($arguments)) {
+            $line .= ' '.implode(' ', $arguments);
         }
-    }
-    else {
-        $arguments = (string)$arguments;
-        if($arguments !== '') {
-            $line .= ' ' . $arguments;
+    } else {
+        $arguments = (string) $arguments;
+        if ($arguments !== '') {
+            $line .= ' '.$arguments;
         }
     }
     $output = array();
-    @exec($line . ' 2>&1', $output, $exitCode);
-    if(!@is_int($exitCode)) {
+    @exec($line.' 2>&1', $output, $exitCode);
+    if (!@is_int($exitCode)) {
         $exitCode = -1;
     }
     if (!is_array($output)) {
@@ -394,15 +451,14 @@ function run($command, $arguments = '', $goodExitCode = 0, &$exitCode = null) {
         if (in_array($exitCode, $goodExitCode) !== true) {
             $failed = true;
         }
-    }
-    elseif(is_int($goodExitCode) || (is_string($goodExitCode) && is_numeric($goodExitCode))) {
+    } elseif (is_int($goodExitCode) || (is_string($goodExitCode) && is_numeric($goodExitCode))) {
         $goodExitCode = (int) $goodExitCode;
         if ($exitCode !== $goodExitCode) {
             $failed = true;
         }
     }
     if ($failed) {
-        throw new Exception("$command failed: " . implode("\n", $output));
+        throw new Exception("$command failed: ".implode("\n", $output));
     }
 
     return implode("\n", $output);
@@ -410,9 +466,12 @@ function run($command, $arguments = '', $goodExitCode = 0, &$exitCode = null) {
 
 /**
  * Reads a CSV language file.
+ * 
  * @param string $csv
- * @param bool $isSourceLanguage
+ * @param bool   $isSourceLanguage
+ * 
  * @return Gettext\Translations
+ * 
  * @throws Exception
  */
 function CsvToGettext($csv, $isSourceLanguage = false)
@@ -420,9 +479,9 @@ function CsvToGettext($csv, $isSourceLanguage = false)
     $translations = new Gettext\Translations();
     //$translations->setLanguage($language->id);
     $charMap = array(
-        "\\t" => "\t",
-        "\\r" => "\r",
-        "\\n" => "\n",
+        '\\t' => "\t",
+        '\\r' => "\r",
+        '\\n' => "\n",
     );
     if (strpos($csv, UTF8_BOM) === 0) {
         $csv = substr($csv, strlen(UTF8_BOM));
@@ -438,12 +497,11 @@ function CsvToGettext($csv, $isSourceLanguage = false)
             $chunks = explode("\t", $line);
             if (count($chunks) !== 3) {
                 $invalidLine = true;
-            }
-            else {
+            } else {
                 $classID = $textOut = $textIn = '';
                 foreach ($chunks as $chunkIndex => $chunk) {
                     $len = strlen($chunk);
-                    if ($len < 2 || $chunk[0] !== '"'  || $chunk[$len - 1] !== '"' ) {
+                    if ($len < 2 || $chunk[0] !== '"'  || $chunk[$len - 1] !== '"') {
                         $invalidLine = true;
                         break;
                     }
@@ -479,14 +537,12 @@ function CsvToGettext($csv, $isSourceLanguage = false)
                     }
                 }
             }
-        }
-        elseif (preg_match('/^PRIMARY_LANGID\s+(\d+)$/', $line, $matches)) {
+        } elseif (preg_match('/^PRIMARY_LANGID\s+(\d+)$/', $line, $matches)) {
             if (isset($primaryLangID)) {
                 throw new Exception('Duplicated PRIMARY_LANGID found at line '.($lineIndex + 1));
             }
             $primaryLangID = (int) $matches[1];
-        }
-        else {
+        } else {
             $invalidLine = true;
             if (
                 preg_match('/^TRANSTEXT\s+\d[\d\.]*$/', $line)
@@ -501,7 +557,7 @@ function CsvToGettext($csv, $isSourceLanguage = false)
             }
         }
         if ($invalidLine) {
-            throw new Exception("Bad line ".($lineIndex + 1)." found in language file:\n".$lineOriginal);
+            throw new Exception('Bad line '.($lineIndex + 1)." found in language file:\n".$lineOriginal);
         }
     }
     if (!isset($primaryLangID)) {
@@ -518,12 +574,22 @@ function CsvToGettext($csv, $isSourceLanguage = false)
         throw new Exception('Invalid PRIMARY_LANGID: '.$primaryLangID);
     }
     $translations->setLanguage($langISO);
+
     return $translations;
 }
 
+/**
+ * Convert gettext translations to CSV string.
+ *
+ * @param Gettext\Translations $translations
+ * @param array                $options
+ * 
+ * @return string
+ * 
+ * @throws Exception
+ */
 function GettextToCsv($translations, $options)
 {
-    /** @var Gettext\Translations $translations */
     $csv = array();
     if (!isset($options['TRANSTEXT_VERSION']) || !is_string($options['TRANSTEXT_VERSION']) || !preg_match('/^\d+(\.\d+)*$/', $options['TRANSTEXT_VERSION'])) {
         throw new Exception('Missing/invalid TRANSTEXT_VERSION value in options');
@@ -536,10 +602,9 @@ function GettextToCsv($translations, $options)
     $primaryLangID = null;
     if (isset(WindowsLocales::$primaryLanguages[$iso])) {
         $primaryLangID = WindowsLocales::$primaryLanguages[$iso];
-    }
-    else {
+    } else {
         $chunks = explode('_', str_replace('-', '_', $iso));
-        for ($i = count($chunks) - 1; $i >= 1; $i++) {
+        for ($i = count($chunks) - 1; $i >= 1; ++$i) {
             $isoMain = implode('_', array_slice($chunks, 0, $i));
             if (isset(WindowsLocales::$primaryLanguages[$isoMain])) {
                 $primaryLangID = WindowsLocales::$primaryLanguages[$isoMain];
@@ -555,13 +620,13 @@ function GettextToCsv($translations, $options)
     $needTranslation = array();
     $translated = array();
     $charMap = array(
-        "\t" => "\\t",
-        "\r" => "\\r",
-        "\n" => "\\n",
+        "\t" => '\\t',
+        "\r" => '\\r',
+        "\n" => '\\n',
     );
     foreach ($translations as $translation) {
-        /** @var Gettext\Translation $translation */
-        $serialized = "\"".strtr($translation->getOriginal(), $charMap)."\"\t\"".strtr($translation->getTranslation(), $charMap)."\"\t\"".strtr($translation->getContext(), $charMap)."\"";
+        /* @var Gettext\Translation $translation */
+        $serialized = '"'.strtr($translation->getOriginal(), $charMap)."\"\t\"".strtr($translation->getTranslation(), $charMap)."\"\t\"".strtr($translation->getContext(), $charMap).'"';
         if ($translation->hasTranslation()) {
             if (empty($translated)) {
                 $translated[] = 'TRANSLATED';
@@ -577,4 +642,49 @@ function GettextToCsv($translations, $options)
     $csv = array_merge($csv, $needTranslation, $translated);
 
     return UTF8_BOM.implode("\r\n", $csv)."\r\n";
+}
+
+/**
+ * Read a local file or a remote URL and return its content.
+ *
+ * @param string $path
+ *
+ * @return string
+ *
+ * @throws Exception
+ */
+function getContents($path)
+{
+    if (preg_match('_^\w+://.+_', $path)) {
+        $fd = @fopen($path, 'rb');
+        if (!$fd) {
+            throw new Exception("Failed to start downloading '$path'");
+        }
+        $contents = '';
+        while (!@feof($fd)) {
+            $chunk = @fread($fd, 8192);
+            if ($chunk === false) {
+                @fclose($fd);
+                throw new Exception("Failed to retrieve the content of '$path'");
+            }
+            $contents .= $chunk;
+        }
+        @fclose($fd);
+        if ($contents === '') {
+            throw new Exception("Failed to download '$path'");
+        }
+    } else {
+        if (!is_file($path)) {
+            throw new Exception("Unable to find the file '$path'");
+        }
+        if (!is_readable($path)) {
+            throw new Exception("The file '$path' is not readable");
+        }
+        $contents = @file_get_contents($path);
+        if ($contents === false) {
+            throw new Exception("Failed to read from file '$path'");
+        }
+    }
+
+    return $contents;
 }
