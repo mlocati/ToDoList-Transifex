@@ -143,86 +143,10 @@ try {
             }
             $curl = new Curl("http://www.transifex.com/api/2/project/$txProject/resource/$txResource/?details");
             $curl->setOpt(CURLOPT_USERPWD, $txUsername.':'.$txPassword);
-            /*
             $response = $curl->exec();
             if ($response['info']['http_code'] < 200 || $response['info']['http_code'] >= 300) {
                 throw new Exception($response['body'] ? $response['body'] : "Transifex returned the error code {$response['info']['http_code']}");
             }
-            */
-            $response = array('body' => <<<EOT
-{
-    "source_language_code": "en",
-    "name": "core", 
-    "created": "2015-10-28T12:59:30.901", 
-    "wordcount": 8254, 
-    "i18n_type": "PO", 
-    "project_slug": "tdl-test", 
-    "accept_translations": true, 
-    "last_update": "2015-10-28T16:34:46.656", 
-    "priority": "0", 
-    "available_languages": [
-        {
-            "code_aliases": " ", 
-            "code": "zh-Hans", 
-            "name": "Chinese Simplified"
-        }, 
-        {
-            "code_aliases": " nl-BE ", 
-            "code": "nl_BE", 
-            "name": "Dutch (Belgium)"
-        }, 
-        {
-            "code_aliases": " ", 
-            "code": "en", 
-            "name": "English"
-        }, 
-        {
-            "code_aliases": " fr-FR fr-fr fr_fr ", 
-            "code": "fr_FR", 
-            "name": "French (France)"
-        }, 
-        {
-            "code_aliases": " de-DE de-de de_de  ", 
-            "code": "de_DE", 
-            "name": "German (Germany)"
-        }, 
-        {
-            "code_aliases": " he-IL he-il ", 
-            "code": "he_IL", 
-            "name": "Hebrew (Israel)"
-        }, 
-        {
-            "code_aliases": " it-IT it-it ", 
-            "code": "it_IT", 
-            "name": "Italian (Italy)"
-        }, 
-        {
-            "code_aliases": " ja-JP ja-jp ", 
-            "code": "ja_JP", 
-            "name": "Japanese (Japan)"
-        }, 
-        {
-            "code_aliases": " ru-RU ru-ru ", 
-            "code": "ru_RU", 
-            "name": "Russian (Russia)"
-        }, 
-        {
-            "code_aliases": " sk-SK sk-sk ", 
-            "code": "sk_SK", 
-            "name": "Slovak (Slovakia)"
-        }, 
-        {
-            "code_aliases": " es-ES es_es ", 
-            "code": "es_ES", 
-            "name": "Spanish (Spain)"
-        }
-    ], 
-    "total_entities": 2233, 
-    "slug": "core", 
-    "categories": null
-}
-EOT
-            );
             $info = @json_decode($response['body'], true);
             $invalidResponse = false;
             if (!is_array($info)) {
