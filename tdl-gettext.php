@@ -570,7 +570,12 @@ function CsvToGettext($csv, $isSourceLanguage = false)
             break;
         }
     }
-    if (!isset($langISO)) {
+    if ($isSourceLanguage) {
+        if ($langISO !== null && $langISO !== 'en') {
+            throw new Exception('Invalid PRIMARY_LANGID for the source language: '.$primaryLangID);
+        }
+        $langISO = 'en';
+    } elseif (!isset($langISO)) {
         throw new Exception('Invalid PRIMARY_LANGID: '.$primaryLangID);
     }
     $translations->setLanguage($langISO);
