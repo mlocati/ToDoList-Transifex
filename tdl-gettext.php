@@ -646,7 +646,7 @@ function GettextToCsv($translations, $options)
     }
     $csv = array_merge($csv, $needTranslation, $translated);
 
-    return UTF8_BOM.implode("\r\n", $csv)."\r\n";
+    return UTF8_BOM.implode("\n", $csv)."\n";
 }
 
 /**
