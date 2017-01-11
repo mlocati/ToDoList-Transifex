@@ -351,7 +351,7 @@ function readOptions()
             $config[] = "    'TRANSLATIONS_DIR' => '".addslashes(dirname(__FILE__).DIRECTORY_SEPARATOR.'translations')."',";
             $config[] = '';
             $config[] = '    // The value of the TRANSTEXT Library';
-            $config[] = "    'TRANSTEXT_VERSION' => '7.0.0.0',";
+            $config[] = "    'TRANSTEXT_VERSION' => '7.0.999.6',";
             $config[] = '';
             $config[] = '    // Your Transifex user name';
             $config[] = "    'TRANSIFEX_USERNAME' => 'username',";
