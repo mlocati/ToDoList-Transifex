@@ -629,9 +629,13 @@ function GettextToCsv($translations, $options)
         "\r" => '\\r',
         "\n" => '\\n',
     );
+    $previousTranslation = null;
     foreach ($translations as $translation) {
         /* @var Gettext\Translation $translation */
         $serialized = '"'.strtr($translation->getOriginal(), $charMap)."\"\t\"".strtr($translation->getTranslation(), $charMap)."\"\t\"".strtr($translation->getContext(), $charMap).'"';
+        if ($previousTranslation !== null && $previousTranslation->hasTranslation() === $translation->hasTranslation() && $previousTranslation->getOriginal() === $translation->getOriginal()) {
+            $serialized = '  '.$serialized;
+        }
         if ($translation->hasTranslation()) {
             if (empty($translated)) {
                 $translated[] = 'TRANSLATED';
@@ -643,6 +647,7 @@ function GettextToCsv($translations, $options)
             }
             $needTranslation[] = $serialized;
         }
+        $previousTranslation = $translation;
     }
     $csv = array_merge($csv, $needTranslation, $translated);
 
