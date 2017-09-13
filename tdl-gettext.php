@@ -82,7 +82,7 @@ try {
             if ($json === false) {
                 throw new Exception('Failed to serialize the translations');
             }
-            $curl = new Curl("http://www.transifex.com/api/2/project/$txProject/resource/$txResource/content/");
+            $curl = new Curl("https://www.transifex.com/api/2/project/$txProject/resource/$txResource/content/");
             $curl->setOpt(CURLOPT_USERPWD, $txUsername.':'.$txPassword);
             $curl->setOpt(CURLOPT_POST, true);
             $curl->setOpt(CURLOPT_HTTPHEADER, array('Content-Type: application/json'));
@@ -134,7 +134,7 @@ try {
             if (!preg_match('#^[\w\-]+$#', $txResource)) {
                 throw new Exception('Missing/invalid TRANSIFEX_RESOURCE value in options');
             }
-            $curl = new Curl("http://www.transifex.com/api/2/project/$txProject/resource/$txResource/?details");
+            $curl = new Curl("https://www.transifex.com/api/2/project/$txProject/resource/$txResource/?details");
             $curl->setOpt(CURLOPT_USERPWD, $txUsername.':'.$txPassword);
             $response = $curl->exec();
             if ($response['info']['http_code'] < 200 || $response['info']['http_code'] >= 300) {
@@ -179,7 +179,7 @@ try {
             foreach ($languages as $languageID => $languageName) {
                 echo "Working on $languageName\n";
                 echo '  - downloading... ';
-                $curl = new Curl("http://www.transifex.com/api/2/project/$txProject/resource/$txResource/translation/$languageID/");
+                $curl = new Curl("https://www.transifex.com/api/2/project/$txProject/resource/$txResource/translation/$languageID/");
                 $curl->setOpt(CURLOPT_USERPWD, $txUsername.':'.$txPassword);
                 $curl->setOpt(CURLOPT_CUSTOMREQUEST, 'GET');
                 $response = $curl->exec();
@@ -501,7 +501,7 @@ function CsvToGettext($csv, $isSourceLanguage = false)
                 $classID = $textOut = $textIn = '';
                 foreach ($chunks as $chunkIndex => $chunk) {
                     $len = strlen($chunk);
-                    if ($len < 2 || $chunk[0] !== '"'  || $chunk[$len - 1] !== '"') {
+                    if ($len < 2 || $chunk[0] !== '"' || $chunk[$len - 1] !== '"') {
                         $invalidLine = true;
                         break;
                     }
